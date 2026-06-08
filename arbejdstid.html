@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arbejdstid">
+<meta name="theme-color" content="#0d0f14">
+<title>Arbejdstid</title>
+
+<!-- PWA Manifest inline as data URI -->
+<link rel="manifest" href="data:application/manifest+json,{
+  %22name%22:%22Arbejdstid%22,
+  %22short_name%22:%22Arbejdstid%22,
+  %22start_url%22:%22.%22,
+  %22display%22:%22standalone%22,
+  %22background_color%22:%22%230d0f14%22,
+  %22theme_color%22:%22%230d0f14%22,
+  %22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230d0f14'/%3E%3Ccircle cx='50' cy='50' r='30' stroke='%234a9eff' stroke-width='5' fill='none'/%3E%3Cline x1='50' y1='50' x2='50' y2='28' stroke='%234a9eff' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='50' y1='50' x2='64' y2='58' stroke='%233dca8a' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]
+}">
+
+<!-- Apple touch icon inline SVG converted -->
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH6AYIECsWQEfMmQAAA2tJREFUeNrt3TFO3EAUgOH/7c7bJJsoJLIlDpAGiXACOAO5C71P4Ai5B1egSEFsQkWRlGxBkRASAiEQQiQkJSQk8aYYZRcJAe/uzHvz3u+rnc8zM2889gIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASNXMzMxy27YHg8GgJQiCoeu6p67rnlMIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYTQ/5QkSZKmafq+7/u+7/sQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgg=">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+:root{
+  --bg:#0d0f14;--surface:#161920;--card:#1e2129;--border:#2a2e3a;
+  --text:#f0f2f8;--muted:#8891a8;--accent:#4a9eff;--green:#3dca8a;
+  --amber:#f59e0b;--red:#ef4444;--purple:#a78bfa;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
+  padding-top:var(--safe-top);
+}
+.app{
+  height:100vh;display:flex;flex-direction:column;
+  padding-top:var(--safe-top);
+}
+.pages{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + var(--safe-bottom))}
+.page{display:none}
+.page.active{display:block}
+.header{padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:10;padding-top:20px}
+.header h1{font-size:24px;font-weight:700;letter-spacing:-0.6px}
+.week-badge{font-size:12px;color:var(--muted);background:var(--card);padding:4px 10px;border-radius:20px;border:1px solid var(--border);font-variant-numeric:tabular-nums}
+
+/* Clock section */
+.clock-section{padding:12px 16px 0}
+.clock-card{background:var(--card);border-radius:22px;border:1px solid var(--border);padding:22px;text-align:center}
+.current-time{font-size:44px;font-weight:300;letter-spacing:-2px;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
+.current-date{font-size:13px;color:var(--muted);margin-top:5px}
+.day-off-banner{margin-top:10px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:10px;padding:8px 14px;font-size:13px;color:var(--purple);display:none}
+.status-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.dot.live{background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.status-text{font-size:13px;color:var(--muted)}
+.session-time{font-size:13px;color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums;min-width:40px}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn{padding:15px;border-radius:14px;border:none;font-size:16px;font-weight:600;cursor:pointer;transition:transform 0.1s,opacity 0.15s;letter-spacing:-0.2px}
+.btn:active{transform:scale(0.96)}
+.btn-in{background:var(--green);color:#071a11}
+.btn-out{background:var(--red);color:#fff}
+.btn-off{background:var(--card);color:var(--border);border:1px solid var(--border);cursor:default;opacity:0.5}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 16px 0}
+.stat{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:14px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.stat-value{font-size:22px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:-0.5px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.stat.blue{border-color:rgba(74,158,255,0.25);background:rgba(74,158,255,0.07)}
+.stat.blue .stat-value{color:var(--accent)}
+.stat.amber{border-color:rgba(245,158,11,0.25);background:rgba(245,158,11,0.07)}
+.stat.amber .stat-value{color:var(--amber)}
+
+/* Progress */
+.section-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:16px 20px 8px}
+.progress-wrap{padding:0 16px}
+.track{background:var(--card);border-radius:100px;height:7px;overflow:hidden;border:1px solid var(--border)}
+.fill{height:100%;border-radius:100px;transition:width 0.6s ease}
+.fill.normal{background:var(--green)}
+.fill.over{background:var(--amber)}
+.prog-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+
+/* History */
+.week-nav-row{display:flex;align-items:center;justify-content:space-between;padding:4px 16px;margin-bottom:2px}
+.nav-btn-w{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:20px;width:38px;height:38px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.nav-btn-w:active{transform:scale(0.94)}
+.week-lbl{font-size:14px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.entries{padding:0 16px;display:flex;flex-direction:column;gap:8px}
+.entry{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:13px 15px;display:flex;align-items:center;justify-content:space-between}
+.entry.off{border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.06)}
+.entry.ot{border-color:rgba(245,158,11,0.3)}
+.entry-day{font-size:15px;font-weight:600}
+.entry-day.purple{color:var(--purple)}
+.entry-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.entry-right{text-align:right}
+.entry-h{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.entry-times{font-size:11px;color:var(--muted);margin-top:2px}
+.badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:5px;font-weight:700;margin-left:5px;vertical-align:middle;letter-spacing:0.3px}
+.b-ot{background:rgba(245,158,11,0.15);color:var(--amber)}
+.b-off{background:rgba(167,139,250,0.15);color:var(--purple)}
+.b-wo{background:rgba(239,68,68,0.15);color:var(--red)}
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+
+/* Schedule */
+.sched-list{padding:0 16px;display:flex;flex-direction:column;gap:8px}
+.sched{background:var(--card);border-radius:14px;border:1px solid rgba(167,139,250,0.25);background:rgba(167,139,250,0.06);padding:13px 15px;display:flex;align-items:center;justify-content:space-between}
+.sched.past{opacity:0.45}
+.sched-info .week{font-size:11px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.sched-info .dayname{font-size:15px;font-weight:600;color:var(--purple);margin-top:2px}
+.sched-icon{font-size:22px}
+
+/* Pay */
+.pay-card{background:var(--card);border-radius:20px;border:1px solid var(--border);padding:18px;margin:0 16px}
+.pay-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+.pay-row:last-child{border-bottom:none;padding-bottom:0}
+.pay-row.total{padding-top:15px}
+.pay-label{font-size:14px;color:var(--muted)}
+.pay-val{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.pay-val.green{color:var(--green)}
+.pay-val.amber{color:var(--amber)}
+.pay-val.blue{color:var(--accent)}
+.pay-val.big{font-size:24px;letter-spacing:-0.5px}
+.pay-val.purple{color:var(--purple)}
+.pay-note{margin:10px 16px 0;font-size:11px;color:var(--muted);padding:10px 13px;background:rgba(255,255,255,0.03);border-radius:10px;line-height:1.6}
+
+/* Nav */
+.nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(13,15,20,0.96);
+  border-top:1px solid var(--border);
+  display:flex;
+  padding-bottom:var(--safe-bottom);
+  z-index:100;
+}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;padding:10px 4px 8px;transition:color 0.15s;text-transform:uppercase;letter-spacing:0.5px;-webkit-tap-highlight-color:transparent}
+.nav-item.on{color:var(--accent)}
+.nav-icon{font-size:22px;line-height:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="pages" id="pages">
+
+    <!-- HOME -->
+    <div id="p-home" class="page active">
+      <div class="header">
+        <h1>Arbejdstid</h1>
+        <div class="week-badge" id="week-badge">Uge —</div>
+      </div>
+      <div class="clock-section">
+        <div class="clock-card">
+          <div class="current-time" id="clock">--:--:--</div>
+          <div class="current-date" id="date-label">—</div>
+          <div class="day-off-banner" id="off-banner">🗓️ Fridag i dag</div>
+          <div class="status-row">
+            <div class="dot" id="dot"></div>
+            <span class="status-text" id="status-text">Ikke stemplet ind</span>
+            <span class="session-time" id="session-time"></span>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-in" id="btn-in" onclick="stempleInd()">Stemple ind</button>
+            <button class="btn btn-out btn-off" id="btn-out" onclick="stempleUd()">Stemple ud</button>
+          </div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat blue">
+          <div class="stat-label">Denne uge</div>
+          <div class="stat-value" id="s-week">0,0t</div>
+          <div class="stat-sub">af 37,5 timer</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">I dag</div>
+          <div class="stat-value" id="s-today">0,0t</div>
+          <div class="stat-sub">af 9,75 timer</div>
+        </div>
+        <div class="stat amber">
+          <div class="stat-label">Overarbejde</div>
+          <div class="stat-value" id="s-ot">0,0t</div>
+          <div class="stat-sub" id="s-afsp-sub">0,0t afspadsering</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Løn estimat</div>
+          <div class="stat-value" id="s-pay">0 kr</div>
+          <div class="stat-sub">Denne uge</div>
+        </div>
+      </div>
+      <div class="section-title">Ugeprogress</div>
+      <div class="progress-wrap">
+        <div class="track"><div class="fill normal" id="prog-fill" style="width:0%"></div></div>
+        <div class="prog-meta"><span id="prog-left">0,0t arbejdet</span><span>37,5t mål</span></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="p-history" class="page">
+      <div class="header"><h1>Historik</h1></div>
+      <div class="week-nav-row">
+        <button class="nav-btn-w" onclick="hwk(-1)">‹</button>
+        <span class="week-lbl" id="h-week-lbl">Uge —</span>
+        <button class="nav-btn-w" onclick="hwk(1)">›</button>
+      </div>
+      <div class="entries" id="entries-list"></div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div id="p-schedule" class="page">
+      <div class="header"><h1>Fridage</h1></div>
+      <div class="section-title">Næste 10 uger</div>
+      <div class="sched-list" id="sched-list"></div>
+    </div>
+
+    <!-- PAY -->
+    <div id="p-pay" class="page">
+      <div class="header"><h1>Lønoversigt</h1></div>
+      <div class="week-nav-row">
+        <button class="nav-btn-w" onclick="pwk(-1)">‹</button>
+        <span class="week-lbl" id="p-week-lbl">Uge —</span>
+        <button class="nav-btn-w" onclick="pwk(1)">›</button>
+      </div>
+      <div id="pay-content"></div>
+    </div>
+
+  </div>
+
+  <nav class="nav">
+    <button class="nav-item on" onclick="nav('home',this)" id="nav-home">
+      <span class="nav-icon">⏱</span>Stempel
+    </button>
+    <button class="nav-item" onclick="nav('history',this)" id="nav-history">
+      <span class="nav-icon">📋</span>Historik
+    </button>
+    <button class="nav-item" onclick="nav('schedule',this)" id="nav-schedule">
+      <span class="nav-icon">📅</span>Fridage
+    </button>
+    <button class="nav-item" onclick="nav('pay',this)" id="nav-pay">
+      <span class="nav-icon">💰</span>Løn
+    </button>
+  </nav>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const BASE = 198, OT = 134, WEEKLY = 37.5, DAILY = 9.75;
+const DNAMES = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+const MONTHS = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+// Week offset base: uge 24 (ISO) = tirsdag fri → (24+2)%5=1 ✓
+const WOB = 2;
+
+// ── State ──────────────────────────────────────────────────────────────────
+let entries = {}, activeStart = null, hOff = 0, pOff = 0;
+
+// ── Storage ────────────────────────────────────────────────────────────────
+const SK = 'arbejdstid_v3';
+function save(){
+  try{ localStorage.setItem(SK, JSON.stringify({entries, activeStart})); } catch(e){}
+}
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(SK)||'{}');
+    entries = d.entries||{};
+    activeStart = d.activeStart||null;
+  } catch(e){}
+}
+
+// ── Date helpers ───────────────────────────────────────────────────────────
+function isoWeek(d){
+  const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=dt.getUTCDay()||7;
+  dt.setUTCDate(dt.getUTCDate()+4-day);
+  const ys=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+  return Math.ceil((((dt-ys)/86400000)+1)/7);
+}
+function weekStart(d){
+  const w=new Date(d);
+  const day=w.getDay()||7;
+  w.setDate(w.getDate()-day+1);
+  w.setHours(0,0,0,0);
+  return w;
+}
+function dk(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function dayOff(ws){
+  const off=(isoWeek(ws)+WOB)%5; // 0=Mon,1=Tue,...,4=Fri
+  const d=new Date(ws); d.setDate(d.getDate()+off); return d;
+}
+function isOff(d){ return dk(d)===dk(dayOff(weekStart(d))); }
+function fmtH(h){
+  if(h===0) return '0,0t';
+  const s=h<0?'-':'', a=Math.abs(h), hh=Math.floor(a), mm=Math.round((a-hh)*60);
+  return mm?`${s}${hh}t ${mm}m`:`${s}${hh}t`;
+}
+function fmtT(ts){ const d=new Date(ts); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function weekStartOff(n){ const ws=weekStart(new Date()); ws.setDate(ws.getDate()+n*7); return ws; }
+
+// ── Calculations ───────────────────────────────────────────────────────────
+function weekHours(ws, inclActive){
+  let t=0;
+  for(let i=0;i<5;i++){
+    const d=new Date(ws); d.setDate(d.getDate()+i);
+    const k=dk(d);
+    (entries[k]||[]).forEach(e=>{ const end=e.end||(inclActive&&activeStart?Date.now():0); if(e.end||(inclActive&&activeStart&&!e.end)) t+=(end-e.start)/3600000; });
+  }
+  return t;
+}
+function todayHours(){
+  const k=dk(new Date()); let t=0;
+  (entries[k]||[]).forEach(e=>{ const end=e.end||Date.now(); t+=(end-e.start)/3600000; });
+  return t;
+}
+function calcPay(wh){
+  const norm=Math.min(wh,WEEKLY), otH=Math.max(0,wh-WEEKLY);
+  return { norm, otH, base:norm*BASE, otBase:otH*BASE, otPay:otH*OT, afsp:otH, total:norm*BASE+otH*BASE+otH*OT };
+}
+
+// ── UI updates ─────────────────────────────────────────────────────────────
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  document.getElementById('date-label').textContent=`${DNAMES[now.getDay()]} ${now.getDate()}. ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  document.getElementById('week-badge').textContent=`Uge ${isoWeek(now)}`;
+  document.getElementById('off-banner').style.display=isOff(now)?'block':'none';
+  if(activeStart) document.getElementById('session-time').textContent=fmtH((Date.now()-activeStart)/3600000);
+  updateStats();
+}
+function updateStats(){
+  const ws=weekStart(new Date());
+  const wh=weekHours(ws,true), td=todayHours(), ot=Math.max(0,wh-WEEKLY);
+  const pay=calcPay(wh), pct=Math.min((wh/WEEKLY)*100,100);
+  document.getElementById('s-week').textContent=fmtH(wh);
+  document.getElementById('s-today').textContent=fmtH(td);
+  document.getElementById('s-ot').textContent=fmtH(ot);
+  document.getElementById('s-afsp-sub').textContent=`${fmtH(ot)} afspadsering`;
+  document.getElementById('s-pay').textContent=`${Math.round(pay.total).toLocaleString('da-DK')} kr`;
+  const fill=document.getElementById('prog-fill');
+  fill.style.width=pct+'%';
+  fill.className='fill '+(wh>WEEKLY?'over':'normal');
+  document.getElementById('prog-left').textContent=`${fmtH(wh)} arbejdet`;
+}
+
+// ── Stamp actions ──────────────────────────────────────────────────────────
+function stempleInd(){
+  if(activeStart) return;
+  const k=dk(new Date());
+  if(!entries[k]) entries[k]=[];
+  activeStart=Date.now();
+  entries[k].push({start:activeStart,end:null});
+  save();
+  document.getElementById('dot').className='dot live';
+  document.getElementById('status-text').textContent='Stemplet ind';
+  document.getElementById('btn-in').className='btn btn-in btn-off';
+  document.getElementById('btn-out').className='btn btn-out';
+}
+function stempleUd(){
+  if(!activeStart) return;
+  const k=dk(new Date());
+  const arr=entries[k]||[];
+  const last=arr[arr.length-1];
+  if(last&&!last.end) last.end=Date.now();
+  activeStart=null;
+  save();
+  document.getElementById('dot').className='dot';
+  document.getElementById('status-text').textContent='Stemplet ud';
+  document.getElementById('btn-in').className='btn btn-in';
+  document.getElementById('btn-out').className='btn btn-out btn-off';
+  document.getElementById('session-time').textContent='';
+  updateStats();
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function nav(name, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+name).classList.add('active');
+  btn.classList.add('on');
+  document.getElementById('pages').scrollTop=0;
+  if(name==='history') renderHistory();
+  if(name==='schedule') renderSchedule();
+  if(name==='pay') renderPay();
+}
+function hwk(d){ hOff+=d; renderHistory(); }
+function pwk(d){ pOff+=d; renderPay(); }
+
+// ── History render ─────────────────────────────────────────────────────────
+function renderHistory(){
+  const ws=weekStartOff(hOff);
+  document.getElementById('h-week-lbl').textContent=`Uge ${isoWeek(ws)}`;
+  const el=document.getElementById('entries-list'); el.innerHTML='';
+  let any=false;
+  for(let i=0;i<5;i++){
+    const d=new Date(ws); d.setDate(d.getDate()+i);
+    const k=dk(d), off=isOff(d);
+    let total=0; const times=[];
+    (entries[k]||[]).forEach(e=>{
+      if(e.end){ total+=(e.end-e.start)/3600000; times.push(`${fmtT(e.start)}–${fmtT(e.end)}`); }
+    });
+    if(total===0&&!off) continue;
+    any=true;
+    const workedOff=total>0&&off, isOT=total>DAILY&&!off;
+    const card=document.createElement('div');
+    card.className='entry'+(off?' off':'')+(isOT?' ot':'');
+    const badges=(off?`<span class="badge b-off">Fridag</span>`:'')+
+      (isOT?`<span class="badge b-ot">OT</span>`:'')+
+      (workedOff?`<span class="badge b-wo">Arbejdede</span>`:'');
+    card.innerHTML=`<div>
+      <div class="entry-day${off?' purple':''}">${DNAMES[d.getDay()]}${badges}</div>
+      <div class="entry-sub">${d.getDate()}. ${MONTHS[d.getMonth()]}</div>
+    </div>
+    <div class="entry-right">
+      <div class="entry-h">${total>0?fmtH(total):'—'}</div>
+      <div class="entry-times">${times.join(', ')}</div>
+    </div>`;
+    el.appendChild(card);
+  }
+  if(!any) el.innerHTML='<div class="empty">Ingen registreringer denne uge</div>';
+}
+
+// ── Schedule render ────────────────────────────────────────────────────────
+function renderSchedule(){
+  const el=document.getElementById('sched-list'); el.innerHTML='';
+  const now=new Date(), todayKey=dk(now), tomorrowKey=dk(new Date(now.getFullYear(),now.getMonth(),now.getDate()+1));
+  for(let w=0;w<10;w++){
+    const ws=weekStart(new Date()); ws.setDate(ws.getDate()+w*7);
+    const off=dayOff(ws), k=dk(off);
+    const isPast=off<now&&k!==todayKey;
+    const isToday=k===todayKey, isTomorrow=k===tomorrowKey;
+    const workedOff=entries[k]&&entries[k].some(e=>e.end);
+    const card=document.createElement('div');
+    card.className='sched'+(isPast?' past':'');
+    const label=isToday?' 📌 I dag':isTomorrow?' 📌 I morgen':'';
+    const woBadge=workedOff?`<span class="badge b-wo" style="margin-left:6px">Arbejdede</span>`:'';
+    card.innerHTML=`<div class="sched-info">
+      <div class="week">Uge ${isoWeek(ws)}</div>
+      <div class="dayname">${DNAMES[off.getDay()]} ${off.getDate()}/${off.getMonth()+1}${label}${woBadge}</div>
+    </div>
+    <div class="sched-icon">${isPast?'✅':'🗓️'}</div>`;
+    el.appendChild(card);
+  }
+}
+
+// ── Pay render ─────────────────────────────────────────────────────────────
+function renderPay(){
+  const ws=weekStartOff(pOff);
+  document.getElementById('p-week-lbl').textContent=`Uge ${isoWeek(ws)}`;
+  const wh=weekHours(ws, pOff===0);
+  const p=calcPay(wh);
+  document.getElementById('pay-content').innerHTML=`
+    <div class="pay-card">
+      <div class="pay-row"><span class="pay-label">Timer arbejdet</span><span class="pay-val">${fmtH(wh)}</span></div>
+      <div class="pay-row"><span class="pay-label">Normale timer</span><span class="pay-val">${fmtH(p.norm)}</span></div>
+      <div class="pay-row"><span class="pay-label">Overarbejdstimer</span><span class="pay-val amber">${fmtH(p.otH)}</span></div>
+      <div class="pay-row"><span class="pay-label">Afspadsering optjent</span><span class="pay-val purple">${fmtH(p.afsp)}</span></div>
+      <div class="pay-row"><span class="pay-label">Grundløn (${p.norm.toFixed(2)}t × ${BASE})</span><span class="pay-val green">${Math.round(p.base).toLocaleString('da-DK')} kr</span></div>
+      <div class="pay-row"><span class="pay-label">OT grundløn (${p.otH.toFixed(2)}t × ${BASE})</span><span class="pay-val amber">${Math.round(p.otBase).toLocaleString('da-DK')} kr</span></div>
+      <div class="pay-row"><span class="pay-label">OT tillæg (${p.otH.toFixed(2)}t × ${OT})</span><span class="pay-val amber">${Math.round(p.otPay).toLocaleString('da-DK')} kr</span></div>
+      <div class="pay-row total"><span class="pay-label" style="color:var(--text);font-weight:700">Total løn</span><span class="pay-val blue big">${Math.round(p.total).toLocaleString('da-DK')} kr</span></div>
+    </div>
+    <div class="pay-note">Sats: ${BASE} kr/t grundløn · ${OT} kr/t OT-tillæg. Per overarbejdstime: grundløn + OT-tillæg + 1 afspadseringstime.</div>`;
+}
+
+// ── Service Worker (offline support) ──────────────────────────────────────
+if('serviceWorker' in navigator){
+  const swCode=`
+    const CACHE='arbejdstid-v1';
+    self.addEventListener('install',e=>{ self.skipWaiting(); });
+    self.addEventListener('fetch',e=>{
+      e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response('offline'))));
+    });
+  `;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  const swURL=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swURL).catch(()=>{});
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+load();
+if(activeStart){
+  document.getElementById('dot').className='dot live';
+  document.getElementById('status-text').textContent='Stemplet ind';
+  document.getElementById('btn-in').className='btn btn-in btn-off';
+  document.getElementById('btn-out').className='btn btn-out';
+}
+updateClock();
+setInterval(updateClock,1000);
+</script>
+</body>
+</html>
